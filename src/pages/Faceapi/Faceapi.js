@@ -5,14 +5,13 @@ import * as faceapi from 'face-api.js'
 function FaceApi(){
   const videoRef = useRef()
   const canvasRef = useRef()
+  const idCardRef = useRef();
 
   useEffect(()=>{
     startVideo()
     videoRef && loadModels()
 
   },[])
-
-
 
   const startVideo = ()=>{
     navigator.mediaDevices.getUserMedia({video:true})
@@ -26,10 +25,11 @@ function FaceApi(){
 
   const loadModels = ()=>{
     Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
-      faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
-      faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
-      faceapi.nets.faceExpressionNet.loadFromUri("/models")
+      faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+      faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+      faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+      faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+      faceapi.nets.faceExpressionNet.loadFromUri('/models')
 
       ]).then(()=>{
       faceMyDetect()
@@ -50,29 +50,40 @@ function FaceApi(){
 
     faceapi.draw.drawDetections(canvasRef.current,resized)
     faceapi.draw.drawFaceLandmarks(canvasRef.current,resized)
-    faceapi.draw.drawFaceExpressions(canvasRef.current,resized)
   }
   
 
   const faceMyDetect = ()=>{
     setInterval(async()=>{
-      const detections = await faceapi.detectAllFaces(videoRef.current,
-        new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions()
+      const idCardFacedetection = await faceapi.detectSingleFace(idCardRef.current,
+        new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks().withFaceDescriptor();
 
-      redirect(detections).then(()=>{if(detections.length > 0){window.location.href = "/mety"}});
+      const videoFacedetection = await faceapi.detectSingleFace(videoRef.current,
+          new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks().withFaceDescriptor();
+
+      if(idCardFacedetection && videoFacedetection){
+          const distance = faceapi.euclideanDistance(idCardFacedetection.descriptor, videoFacedetection.descriptor);
+          if(distance<0.5){
+            redirect(videoFacedetection).then(()=>{if(videoFacedetection != undefined){window.location.href = "/mety"}});
+          }
+      }
 
     },1000)
   }
 
   return (
     <div className="myapp">
-    <h1>FAce Detection</h1>
+    <h1>Detection de visage</h1>
       <div className="appvide">
-        
-      <video crossOrigin="anonymous" ref={videoRef} autoPlay></video>
+          <video crossOrigin="anonymous" ref={videoRef} autoPlay></video>
       </div>
-      <canvas ref={canvasRef} width="940" height="650"
-      className="appcanvas"/>
+
+      <canvas ref={canvasRef} width="940" height="650"className="appcanvas"/>
+      <div className="gallery">
+        <img ref={idCardRef} src={require('./img/img.jpg')}  width="200" alt="ID card" height="auto" />
+      </div>
     </div>
     )
 
