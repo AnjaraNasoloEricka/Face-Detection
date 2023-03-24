@@ -64,11 +64,15 @@ function FaceApi(){
           .withFaceLandmarks().withFaceDescriptor();
 
       if(idCardFacedetection && videoFacedetection){
+          redirect(videoFacedetection);
           const distance = faceapi.euclideanDistance(idCardFacedetection.descriptor, videoFacedetection.descriptor);
           if(distance<=0.4){
-            redirect(videoFacedetection).then(()=>{if(videoFacedetection != undefined){console.log("dist"+distance);window.location.href = "/mety"}});
-          }
-      }
+            if(videoFacedetection != undefined)
+            {
+                console.log("dist"+distance);window.location.href = "/mety"
+            }
+          };
+       }
 
     },1000)
   }
