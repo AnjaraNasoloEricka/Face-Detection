@@ -53,29 +53,50 @@ function FaceApi(){
   }
   
 
-  const faceMyDetect = ()=>{
-    setInterval(async()=>{
-      const idCardFacedetection = await faceapi.detectSingleFace(idCardRef.current,
-        new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks().withFaceDescriptor();
-
-      const videoFacedetection = await faceapi.detectSingleFace(videoRef.current,
-          new faceapi.TinyFaceDetectorOptions())
-          .withFaceLandmarks().withFaceDescriptor();
-
-      if(idCardFacedetection && videoFacedetection){
-          redirect(videoFacedetection);
-          const distance = faceapi.euclideanDistance(idCardFacedetection.descriptor, videoFacedetection.descriptor);
-          if(distance<=0.4){
-            if(videoFacedetection != undefined)
-            {
-                console.log("dist"+distance);window.location.href = "/mety"
+  const faceMyDetect = async () => {
+    // Fetch user data
+    const response = await fetch('https://athack-back-hiu-2023.vercel.app/user/all', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const users = await response.json();
+  
+    const intervalId =  setInterval(async () => {
+      const videoFacedetection = await faceapi
+        .detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+  
+      if (videoFacedetection) {
+        redirect(videoFacedetection);
+  
+        for (const user of users) {
+          const idCardImg = new Image();
+          idCardImg.src = user.profil;
+          idCardImg.crossOrigin = "anonymous";
+  
+          const idCardFacedetection = await faceapi
+            .detectSingleFace(idCardImg, new faceapi.TinyFaceDetectorOptions())
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+  
+          if (idCardFacedetection) {
+            const distance = faceapi.euclideanDistance(idCardFacedetection.descriptor, videoFacedetection.descriptor);
+  
+            if (distance <= 0.4) {
+              console.log(`Match found for user: ${user.prenom} ${user.nom}`);
+              console.log(`Distance: ${distance}`);
+              // Redirect or perform any desired action
+              clearInterval(intervalId);
+              break;
             }
-          };
-       }
-
-    },1000)
-  }
+          }
+        }
+      }
+    }, 1000);
+  };
 
   return (
     <div className="myapp">
@@ -84,7 +105,7 @@ function FaceApi(){
           <video crossOrigin="anonymous" ref={videoRef} autoPlay></video>
       </div>
 
-      <canvas ref={canvasRef} width="940" height="650"className="appcanvas"/>
+        <canvas ref={canvasRef} width="940" height="650"className="appcanvas"/>
         <img ref={idCardRef} src={require('./img/img.jpg')}  width="200" alt="ID card" height="auto" />
     </div>
     )
