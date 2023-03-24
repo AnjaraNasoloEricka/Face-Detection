@@ -6,26 +6,12 @@ function FaceApi(){
   const videoRef = useRef()
   const canvasRef = useRef()
   const idCardRef = useRef();
-  const [users,setUsers]=useState([]);
-
-  function getAllUser(){
-      fetch('https://athack-back-hiu-2023.vercel.app/user/all', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-      .then(response => response.json())
-      .then(data => setUsers(data))
-      .catch(error => console.error(error))
-  }
 
   useEffect(()=>{
     startVideo()
     videoRef && loadModels()
-    getAllUser();
 
-  },[idCardRef])
+  },[])
 
   const startVideo = ()=>{
     navigator.mediaDevices.getUserMedia({video:true})
@@ -67,35 +53,25 @@ function FaceApi(){
   }
   
 
-  async function setCardFacedetection(item,videoFacedetection){
-      idCardRef.current.src=item.profil;
+  const faceMyDetect = ()=>{
+    setInterval(async()=>{
       const idCardFacedetection = await faceapi.detectSingleFace(idCardRef.current,
         new faceapi.TinyFaceDetectorOptions())
         .withFaceLandmarks().withFaceDescriptor();
 
+      const videoFacedetection = await faceapi.detectSingleFace(videoRef.current,
+          new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks().withFaceDescriptor();
+
       if(idCardFacedetection && videoFacedetection){
-        const distance = faceapi.euclideanDistance(idCardFacedetection.descriptor, videoFacedetection.descriptor);
-        if(distance<0.5){
-          redirect(videoFacedetection).then(()=>{if(videoFacedetection != undefined){window.location.href = "/mety"}});
-        }
+          const distance = faceapi.euclideanDistance(idCardFacedetection.descriptor, videoFacedetection.descriptor);
+          if(distance<=0.4){
+            redirect(videoFacedetection).then(()=>{if(videoFacedetection != undefined){console.log("dist"+distance);window.location.href = "/mety"}});
+          }
       }
+
+    },1000)
   }
-
-  const faceMyDetect = async ()=>{
-    const videoFacedetection = await faceapi.detectSingleFace(videoRef.current,
-      new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks().withFaceDescriptor();
-      users.map((item)=>{
-        setInterval(async()=>{
-        console.log("huhuhuhuhuhu");
-        console.log("gtgtfrfr "+JSON.stringify(item));
-        console.log("hihihihihihi");
-        setCardFacedetection(item,videoFacedetection);
-      },2000)
-    })
-
-  }
-
 
   return (
     <div className="myapp">
@@ -105,9 +81,7 @@ function FaceApi(){
       </div>
 
       <canvas ref={canvasRef} width="940" height="650"className="appcanvas"/>
-      <div className="gallery">
         <img ref={idCardRef} src={require('./img/img.jpg')}  width="200" alt="ID card" height="auto" />
-      </div>
     </div>
     )
 
